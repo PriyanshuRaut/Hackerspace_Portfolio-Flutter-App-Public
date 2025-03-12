@@ -1,35 +1,41 @@
 {
   "project_info": {
-    "project_number": "704633042290",
-    "firebase_url": "https://master-calculator-pro2-default-rtdb.firebaseio.com",
-    "project_id": "master-calculator-pro2",
-    "storage_bucket": "master-calculator-pro2.appspot.com"
+    "project_number": "596859222091",
+    "project_id": "hackerspace-79b82",
+    "storage_bucket": "hackerspace-79b82.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:704633042290:android:0e26d1fabd028d719499eb",
+        "mobilesdk_app_id": "1:596859222091:android:37b5960ff75c915fc675ce",
         "android_client_info": {
           "package_name": "com.example.hackerspace"
         }
       },
       "oauth_client": [
         {
-          "client_id": "704633042290-drn2k1jra56ensk0p5qbdemhp3ib162j.apps.googleusercontent.com",
+          "client_id": "596859222091-pc2ongrlsbg5ivdi6ccmbodcvdsn4c3h.apps.googleusercontent.com",
           "client_type": 3
         }
       ],
       "api_key": [
         {
-          "current_key": "AIzaSyBWueP6whUFM8q_czfvtURGA0yqW3rKm40"
+          "current_key": "AIzaSyAoNKJFr0IjKxzJ01VaN396OzxhQwOhuEw"
         }
       ],
       "services": {
         "appinvite_service": {
           "other_platform_oauth_client": [
             {
-              "client_id": "704633042290-drn2k1jra56ensk0p5qbdemhp3ib162j.apps.googleusercontent.com",
+              "client_id": "596859222091-pc2ongrlsbg5ivdi6ccmbodcvdsn4c3h.apps.googleusercontent.com",
               "client_type": 3
+            },
+            {
+              "client_id": "596859222091-fkj0g9k62s1hdb4v4d6737iouif2h5b6.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.hackerspace"
+              }
             }
           ]
         }
@@ -37,234 +43,35 @@
     },
     {
       "client_info": {
-        "mobilesdk_app_id": "1:704633042290:android:f554fbb56a6452869499eb",
+        "mobilesdk_app_id": "1:596859222091:android:30f302627f43f501c675ce",
         "android_client_info": {
-          "package_name": "com.master.adminpanelformastercalculatorpro"
+          "package_name": "com.hackerspace.hackerspace"
         }
       },
       "oauth_client": [
         {
-          "client_id": "704633042290-15jh5oio6qh3bdavc88q2ru7tn1ppvvp.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "com.master.adminpanelformastercalculatorpro",
-            "certificate_hash": "93fe942ee8afd4ce4c442913e2c89e45164be2e9"
-          }
-        },
-        {
-          "client_id": "704633042290-drn2k1jra56ensk0p5qbdemhp3ib162j.apps.googleusercontent.com",
+          "client_id": "596859222091-pc2ongrlsbg5ivdi6ccmbodcvdsn4c3h.apps.googleusercontent.com",
           "client_type": 3
         }
       ],
       "api_key": [
         {
-          "current_key": "AIzaSyBWueP6whUFM8q_czfvtURGA0yqW3rKm40"
+          "current_key": "AIzaSyAoNKJFr0IjKxzJ01VaN396OzxhQwOhuEw"
         }
       ],
       "services": {
         "appinvite_service": {
           "other_platform_oauth_client": [
             {
-              "client_id": "704633042290-drn2k1jra56ensk0p5qbdemhp3ib162j.apps.googleusercontent.com",
+              "client_id": "596859222091-pc2ongrlsbg5ivdi6ccmbodcvdsn4c3h.apps.googleusercontent.com",
               "client_type": 3
-            }
-          ]
-        }
-      }
-    },
-    {
-      "client_info": {
-        "mobilesdk_app_id": "1:704633042290:android:55fc2e89e83d32b09499eb",
-        "android_client_info": {
-          "package_name": "com.mastercalculator.calculatorpro"
-        }
-      },
-      "oauth_client": [
-        {
-          "client_id": "704633042290-acqr6c28vudovs8p7lia582jg8g281tm.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "com.mastercalculator.calculatorpro",
-            "certificate_hash": "93fe942ee8afd4ce4c442913e2c89e45164be2e9"
-          }
-        },
-        {
-          "client_id": "704633042290-hni9hb7drb71t5vn3rnt28sok9roknl4.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "com.mastercalculator.calculatorpro",
-            "certificate_hash": "1d20ed316dbbfd5f0a24d77438d991de67172576"
-          }
-        },
-        {
-          "client_id": "704633042290-drn2k1jra56ensk0p5qbdemhp3ib162j.apps.googleusercontent.com",
-          "client_type": 3
-        }
-      ],
-      "api_key": [
-        {
-          "current_key": "AIzaSyBWueP6whUFM8q_czfvtURGA0yqW3rKm40"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": [
+            },
             {
-              "client_id": "704633042290-drn2k1jra56ensk0p5qbdemhp3ib162j.apps.googleusercontent.com",
-              "client_type": 3
-            }
-          ]
-        }
-      }
-    },
-    {
-      "client_info": {
-        "mobilesdk_app_id": "1:704633042290:android:daf3e590c6710ab59499eb",
-        "android_client_info": {
-          "package_name": "com.masters.gamecorner"
-        }
-      },
-      "oauth_client": [
-        {
-          "client_id": "704633042290-drn2k1jra56ensk0p5qbdemhp3ib162j.apps.googleusercontent.com",
-          "client_type": 3
-        }
-      ],
-      "api_key": [
-        {
-          "current_key": "AIzaSyBWueP6whUFM8q_czfvtURGA0yqW3rKm40"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": [
-            {
-              "client_id": "704633042290-drn2k1jra56ensk0p5qbdemhp3ib162j.apps.googleusercontent.com",
-              "client_type": 3
-            }
-          ]
-        }
-      }
-    },
-    {
-      "client_info": {
-        "mobilesdk_app_id": "1:704633042290:android:c71bfc223044fb829499eb",
-        "android_client_info": {
-          "package_name": "com.masters.hibbot"
-        }
-      },
-      "oauth_client": [
-        {
-          "client_id": "704633042290-drn2k1jra56ensk0p5qbdemhp3ib162j.apps.googleusercontent.com",
-          "client_type": 3
-        }
-      ],
-      "api_key": [
-        {
-          "current_key": "AIzaSyBWueP6whUFM8q_czfvtURGA0yqW3rKm40"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": [
-            {
-              "client_id": "704633042290-drn2k1jra56ensk0p5qbdemhp3ib162j.apps.googleusercontent.com",
-              "client_type": 3
-            }
-          ]
-        }
-      }
-    },
-    {
-      "client_info": {
-        "mobilesdk_app_id": "1:704633042290:android:e91e7caa50c21c239499eb",
-        "android_client_info": {
-          "package_name": "com.masters.instasaverapp"
-        }
-      },
-      "oauth_client": [
-        {
-          "client_id": "704633042290-drn2k1jra56ensk0p5qbdemhp3ib162j.apps.googleusercontent.com",
-          "client_type": 3
-        }
-      ],
-      "api_key": [
-        {
-          "current_key": "AIzaSyBWueP6whUFM8q_czfvtURGA0yqW3rKm40"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": [
-            {
-              "client_id": "704633042290-drn2k1jra56ensk0p5qbdemhp3ib162j.apps.googleusercontent.com",
-              "client_type": 3
-            }
-          ]
-        }
-      }
-    },
-    {
-      "client_info": {
-        "mobilesdk_app_id": "1:704633042290:android:66961bb5f0842d2f9499eb",
-        "android_client_info": {
-          "package_name": "com.masters.mastersstore"
-        }
-      },
-      "oauth_client": [
-        {
-          "client_id": "704633042290-c534sfh740j4u8e1mm3vsrmjknv189q2.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "com.masters.mastersstore",
-            "certificate_hash": "93fe942ee8afd4ce4c442913e2c89e45164be2e9"
-          }
-        },
-        {
-          "client_id": "704633042290-drn2k1jra56ensk0p5qbdemhp3ib162j.apps.googleusercontent.com",
-          "client_type": 3
-        }
-      ],
-      "api_key": [
-        {
-          "current_key": "AIzaSyBWueP6whUFM8q_czfvtURGA0yqW3rKm40"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": [
-            {
-              "client_id": "704633042290-drn2k1jra56ensk0p5qbdemhp3ib162j.apps.googleusercontent.com",
-              "client_type": 3
-            }
-          ]
-        }
-      }
-    },
-    {
-      "client_info": {
-        "mobilesdk_app_id": "1:704633042290:android:d644bcb1fa502aa39499eb",
-        "android_client_info": {
-          "package_name": "com.masters.masterstore"
-        }
-      },
-      "oauth_client": [
-        {
-          "client_id": "704633042290-drn2k1jra56ensk0p5qbdemhp3ib162j.apps.googleusercontent.com",
-          "client_type": 3
-        }
-      ],
-      "api_key": [
-        {
-          "current_key": "AIzaSyBWueP6whUFM8q_czfvtURGA0yqW3rKm40"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": [
-            {
-              "client_id": "704633042290-drn2k1jra56ensk0p5qbdemhp3ib162j.apps.googleusercontent.com",
-              "client_type": 3
+              "client_id": "596859222091-fkj0g9k62s1hdb4v4d6737iouif2h5b6.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.hackerspace"
+              }
             }
           ]
         }

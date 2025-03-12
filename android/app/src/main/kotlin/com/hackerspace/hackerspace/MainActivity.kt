@@ -1,4 +1,4 @@
-package com.example.hackerspace
+package com.hackerspace.hackerspace
 
 import io.flutter.embedding.android.FlutterActivity
 

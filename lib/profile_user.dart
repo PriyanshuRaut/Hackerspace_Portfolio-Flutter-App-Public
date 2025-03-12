@@ -1,10 +1,9 @@
-import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:hackerspace/register_page.dart';
-import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
 import 'drawer_widget.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class UserProfilePage extends StatefulWidget {
   @override
@@ -24,79 +23,74 @@ class _UserProfilePageState extends State<UserProfilePage> {
     _loadUserData();
   }
 
+  // Load user data from Firebase Auth and Firestore
   Future<void> _loadUserData() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      nameController.text = prefs.getString("name") ?? "";
-      emailController.text = prefs.getString("email") ?? "";
-      phoneController.text = prefs.getString("phone") ?? "";
-      gender = prefs.getString("gender") ?? "Male";
-    });
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      setState(() {
+        nameController.text = user.displayName ?? "";
+        emailController.text = user.email ?? "";
+      });
+      // Load additional user details from Firestore
+      DocumentSnapshot userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+      if (userDoc.exists) {
+        final data = userDoc.data() as Map<String, dynamic>;
+        setState(() {
+          phoneController.text = data['phone'] ?? "";
+          gender = data['gender'] ?? "Male";
+        });
+      }
+    }
   }
 
-  Future<void> _saveUserData() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString("name", nameController.text);
-    await prefs.setString("email", emailController.text);
-    await prefs.setString("phone", phoneController.text);
-    await prefs.setString("gender", gender);
-  }
-
-  Future<void> _logout() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.clear();
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => RegisterPage()),
-    );
-  }
-
-  Future<void> _updateUserDataToServer() async {
+  // Update user data in Firebase Auth and Firestore
+  Future<void> _updateUserDataFirebase() async {
     setState(() {
       isLoading = true;
     });
-
-    final url = Uri.parse(
-        "https://b43f-2405-201-8021-2002-8142-bada-2ff5-adab.ngrok-free.app/update_user.php");
-
     try {
-      final response = await http.post(
-        url,
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode({
-          "email": emailController.text,
-          "name": nameController.text,
-          "phone_number": phoneController.text,
-          "gender": gender,
-        }),
-      );
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        // Update the display name in Firebase Auth
+        await user.updateDisplayName(nameController.text);
+        // Update additional details in Firestore (phone, gender)
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .set({
+          'phone': phoneController.text,
+          'gender': gender,
+        }, SetOptions(merge: true));
 
-      if (response.statusCode == 200) {
-        final responseData = jsonDecode(response.body);
-        if (responseData['success'] == true) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Profile updated successfully!")),
-          );
-          await _saveUserData();
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text("Error: ${responseData['message']}")),
-          );
-        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Profile updated successfully!")),
+        );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Server error: ${response.statusCode}")),
+          const SnackBar(content: Text("No user is currently logged in.")),
         );
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Network error: $e")),
+        SnackBar(content: Text("Error updating profile: $e")),
       );
     } finally {
       setState(() {
         isLoading = false;
       });
     }
+  }
+
+  // Logout using Firebase Authentication
+  Future<void> _logout() async {
+    await FirebaseAuth.instance.signOut();
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => RegisterPage()),
+    );
   }
 
   @override
@@ -110,97 +104,94 @@ class _UserProfilePageState extends State<UserProfilePage> {
       body: CustomPaint(
         painter: PointedHexagonGridPainter(),
         child: Center(
-          child: Padding(
+          child: SingleChildScrollView(
             padding: const EdgeInsets.all(16.0),
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.black,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    padding: const EdgeInsets.all(20.0),
-                    child: Column(
-                      children: [
-                        const Text(
-                          "User Info",
-                          style: TextStyle(
-                            color: Colors.greenAccent,
-                            fontSize: 30,
-                            fontWeight: FontWeight.bold,
-                            shadows: [
-                              Shadow(
-                                blurRadius: 10,
-                                color: Colors.greenAccent,
-                                offset: Offset(0, 0),
-                              ),
-                            ],
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: 500),
+              // Using a Card with semi-transparent background to show grid behind it
+              child: Card(
+                color: Colors.black.withOpacity(0.7),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                elevation: 10,
+                child: Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        "User Info",
+                        style: TextStyle(
+                          color: Colors.greenAccent,
+                          fontSize: 30,
+                          fontWeight: FontWeight.bold,
+                          shadows: [
+                            Shadow(
+                              blurRadius: 10,
+                              color: Colors.greenAccent,
+                              offset: Offset(0, 0),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 30),
+                      _buildTextField(controller: nameController, label: "Name"),
+                      const SizedBox(height: 20),
+                      _buildTextField(controller: emailController, label: "Email", enabled: false),
+                      const SizedBox(height: 20),
+                      _buildTextField(controller: phoneController, label: "Phone Number"),
+                      const SizedBox(height: 20),
+                      DropdownButtonFormField<String>(
+                        value: gender,
+                        decoration: InputDecoration(
+                          labelText: "Gender",
+                          labelStyle: TextStyle(color: Colors.white70),
+                          filled: true,
+                          fillColor: Colors.grey[900],
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
                           ),
                         ),
-                        const SizedBox(height: 30),
-                        _buildTextField(
-                          controller: nameController,
-                          label: "Name",
+                        items: ["Male", "Female", "Other"]
+                            .map((value) => DropdownMenuItem(
+                          value: value,
+                          child: Text(value, style: TextStyle(color: Colors.white)),
+                        ))
+                            .toList(),
+                        onChanged: (newValue) {
+                          setState(() {
+                            gender = newValue!;
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 30),
+                      ElevatedButton(
+                        onPressed: isLoading ? null : _updateUserDataFirebase,
+                        child: isLoading
+                            ? const CircularProgressIndicator(
+                          color: Colors.white,
+                        )
+                            : const Text(
+                          "Save Changes",
+                          style: TextStyle(fontSize: 20),
                         ),
-                        const SizedBox(height: 20),
-                        _buildTextField(
-                          controller: emailController,
-                          label: "Email",
-                          enabled: false,
+                      ),
+                      const SizedBox(height: 30),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red,
+                          padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 30),
                         ),
-                        const SizedBox(height: 20),
-                        _buildTextField(
-                          controller: phoneController,
-                          label: "Phone Number",
+                        onPressed: _logout,
+                        child: const Text(
+                          "Logout",
+                          style: TextStyle(fontSize: 20),
                         ),
-                        const SizedBox(height: 20),
-                        DropdownButton<String>(
-                          value: gender,
-                          onChanged: (newValue) {
-                            setState(() {
-                              gender = newValue!;
-                            });
-                          },
-                          items: ["Male", "Female", "Other"]
-                              .map<DropdownMenuItem<String>>((value) {
-                            return DropdownMenuItem(
-                              value: value,
-                              child: Text(value),
-                            );
-                          }).toList(),
-                        ),
-                        const SizedBox(height: 30),
-                        ElevatedButton(
-                          onPressed:
-                          isLoading ? null : _updateUserDataToServer,
-                          child: isLoading
-                              ? const CircularProgressIndicator(
-                            color: Colors.white,
-                          )
-                              : const Text(
-                            "Save Changes",
-                            style: TextStyle(fontSize: 20),
-                          ),
-                        ),
-                        const SizedBox(height: 30),
-                        ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.red,
-                            padding: const EdgeInsets.symmetric(
-                                vertical: 15, horizontal: 30),
-                          ),
-                          onPressed: _logout,
-                          child: const Text(
-                            "Logout",
-                            style: TextStyle(fontSize: 20),
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
           ),
@@ -209,19 +200,20 @@ class _UserProfilePageState extends State<UserProfilePage> {
     );
   }
 
-  Widget _buildTextField(
-      {required TextEditingController controller,
-        required String label,
-        bool enabled = true}) {
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    bool enabled = true,
+  }) {
     return TextField(
       controller: controller,
       enabled: enabled,
-      style: const TextStyle(fontSize: 18),
+      style: const TextStyle(fontSize: 18, color: Colors.white),
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: const TextStyle(fontSize: 18),
-        fillColor: Colors.black,
+        labelStyle: const TextStyle(fontSize: 18, color: Colors.white70),
         filled: true,
+        fillColor: Colors.grey[900],
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
         ),
@@ -233,8 +225,9 @@ class _UserProfilePageState extends State<UserProfilePage> {
 class PointedHexagonGridPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.black
+    // Use a lighter, semi-transparent white color for the grid lines
+    final gridPaint = Paint()
+      ..color = Colors.white.withOpacity(0.3)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1;
 
@@ -244,12 +237,10 @@ class PointedHexagonGridPainter extends CustomPainter {
 
     for (double y = 0; y < size.height + hexHeight; y += hexHeight * 0.75) {
       bool isOffsetRow = ((y ~/ (hexHeight * 0.75)) % 2 == 1);
-
       for (double x = 0; x < size.width + hexWidth; x += hexWidth) {
         double xOffset = isOffsetRow ? hexWidth / 2 : 0;
-
         final center = Offset(x + xOffset, y);
-        drawHexagon(canvas, paint, center, hexRadius);
+        drawHexagon(canvas, gridPaint, center, hexRadius);
       }
     }
   }

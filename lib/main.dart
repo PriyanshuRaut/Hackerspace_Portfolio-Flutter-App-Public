@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'home_page.dart';
 import 'register_page.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(); // Initialize Firebase
   runApp(const MainPage());
 }
 
@@ -29,23 +31,18 @@ class LandingPage extends StatelessWidget {
   const LandingPage({super.key});
 
   Future<void> navigateBasedOnAuth(BuildContext context) async {
-    final prefs = await SharedPreferences.getInstance();
+    // Check if a user is currently signed in using Firebase Auth
+    final user = FirebaseAuth.instance.currentUser;
 
-    // Check if user details exist in SharedPreferences
-    final name = prefs.getString("name");
-    final email = prefs.getString("email");
-
-    print("Name: $name, Email: $email"); // Debugging line
-
-    if (name != null && email != null) {
-      // User exists, navigate to HomePage
+    if (user != null) {
+      // User is signed in, navigate to HomePage
       print("User found, navigating to HomePage...");
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const HomePage()),
       );
     } else {
-      // No user data found, navigate to RegisterPage
+      // No user signed in, navigate to RegisterPage
       print("No user data, navigating to RegisterPage...");
       Navigator.pushReplacement(
         context,

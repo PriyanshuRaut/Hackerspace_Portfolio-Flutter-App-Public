@@ -1,13 +1,15 @@
-import 'dart:convert';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:hackerspace/login_page.dart';
-import 'package:http/http.dart' as http;
-import 'dart:math';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'home_page.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(); // Initialize Firebase
   runApp(MyApp());
 }
 
@@ -15,6 +17,12 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      title: 'Hacker Space',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        brightness: Brightness.dark,
+        scaffoldBackgroundColor: const Color(0xFF0D0D0D),
+      ),
       home: RegisterPage(),
     );
   }
@@ -31,261 +39,334 @@ class _RegisterScreenState extends State<RegisterPage> {
   final TextEditingController phoneController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
   String gender = "Male";
+  bool isLoading = false; // Loader flag
 
   final GoogleSignIn _googleSignIn = GoogleSignIn();
 
-  Future<void> saveUserDetails(String name, String email, String phone,
-      String gender) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString("name", name);
-    await prefs.setString("email", email);
-    await prefs.setString("phone", phone);
-    await prefs.setString("gender", gender);
+  // Save or update the user data in Cloud Firestore.
+  // If the text fields are empty, fallback to the user’s Firebase profile data.
+  Future<void> _saveUserDataToFirestore(User user) async {
+    final String userName = nameController.text.trim().isEmpty
+        ? (user.displayName ?? "")
+        : nameController.text.trim();
+    final String userEmail = emailController.text.trim().isEmpty
+        ? (user.email ?? "")
+        : emailController.text.trim();
+
+    DocumentReference userDoc =
+    FirebaseFirestore.instance.collection('users').doc(user.uid);
+    await userDoc.set({
+      'name': userName,
+      'email': userEmail,
+      'phone': phoneController.text.trim(),
+      'gender': gender,
+      'createdAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
   }
 
   Future<void> registerUser() async {
-    final url = Uri.parse(
-        "https://41cc-2405-201-8021-2002-11b8-1d04-9635-7ea2.ngrok-free.app/register_user");
+    setState(() {
+      isLoading = true;
+    });
+    try {
+      // Create user with email and password using Firebase Auth
+      UserCredential userCredential =
+      await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        email: emailController.text.trim(),
+        password: passwordController.text,
+      );
+      // Update display name in Firebase Auth
+      await userCredential.user?.updateDisplayName(nameController.text.trim());
+      // Save additional user details to Firestore
+      await _saveUserDataToFirestore(userCredential.user!);
 
-    final response = await http.post(
-      url,
-      headers: {"Content-Type": "application/json"},
-      body: jsonEncode({
-        "name": nameController.text,
-        "email": emailController.text,
-        "phone_number": phoneController.text,
-        "gender": gender,
-        "password": passwordController.text,
-      }),
-    );
-
-    final responseData = jsonDecode(response.body);
-    if (responseData['success']) {
-      await saveUserDetails(
-        nameController.text,
-        emailController.text,
-        phoneController.text,
-        gender,
-
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Registration successful")),
       );
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const HomePage()),
       );
+    } on FirebaseAuthException catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(responseData['message'])),
+        SnackBar(content: Text("Registration failed: ${e.message}")),
       );
-      // Ensure navigation happens after showing the SnackBar
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("An error occurred: $e")),
+      );
+    } finally {
+      setState(() {
+        isLoading = false;
       });
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content: Text("Registration failed: ${responseData['message']}")),
-      );
     }
   }
 
   Future<void> signInWithGoogle() async {
+    setState(() {
+      isLoading = true;
+    });
     try {
+      // Trigger the Google Sign-In flow
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      if (googleUser != null) {
-        final url = Uri.parse(
-            "https://41cc-2405-201-8021-2002-11b8-1d04-9635-7ea2.ngrok-free.app/register_user");
-
-        final response = await http.post(
-          url,
-          headers: {"Content-Type": "application/json"},
-          body: jsonEncode({
-            "name": googleUser.displayName,
-            "email": googleUser.email,
-            "google_sign_in": true,
-          }),
-        );
-
-        final responseData = jsonDecode(response.body);
-        if (responseData['success']) {
-          await saveUserDetails(
-            googleUser.displayName ?? "",
-            googleUser.email,
-            "",
-            "Google",
-          );
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(responseData['message'])),
-          );
-          // Ensure navigation happens after showing the SnackBar
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => const HomePage()),
-            );
-          });
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(
-                "Google Sign-In failed: ${responseData['message']}")),
-          );
-        }
+      if (googleUser == null) {
+        // Sign-in aborted by user
+        setState(() {
+          isLoading = false;
+        });
+        return;
       }
-    } catch (error) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Google Sign-In error: $error")),
+      final GoogleSignInAuthentication googleAuth =
+      await googleUser.authentication;
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
       );
+      // Sign in to Firebase with the Google credential
+      UserCredential userCredential =
+      await FirebaseAuth.instance.signInWithCredential(credential);
+      // Save user data to Firestore.
+      await _saveUserDataToFirestore(userCredential.user!);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Google Sign-In successful")),
+      );
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const HomePage()),
+      );
+    } on FirebaseAuthException catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Google Sign-In failed: ${e.message}")),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Google Sign-In error: $e")),
+      );
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
     }
   }
 
-
   @override
   Widget build(BuildContext context) {
+    // Responsive design using ConstrainedBox and SingleChildScrollView
     return Scaffold(
       body: Stack(
         children: [
+          // Using the provided hexagon grid background
           CustomPaint(
-            size: Size(double.infinity, double.infinity),
+            size: MediaQuery.of(context).size,
             painter: PointedHexagonGridPainter(),
           ),
           Center(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(16.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  TextField(
-                    controller: nameController,
-                    decoration: InputDecoration(
-                      labelText: "Name",
-                      floatingLabelBehavior: FloatingLabelBehavior.auto,
-                      filled: true,
-                      fillColor: Colors.white,
-                      border: OutlineInputBorder(),
-                      labelStyle: TextStyle(color: Colors.black),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: 500),
+                child: Card(
+                  color: Colors.black.withOpacity(0.8),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  elevation: 10,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          "Register",
+                          style: TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        SizedBox(height: 24),
+                        TextField(
+                          controller: nameController,
+                          decoration: InputDecoration(
+                            labelText: "Name",
+                            labelStyle: TextStyle(color: Colors.white70),
+                            hintText: "Enter your name",
+                            hintStyle: TextStyle(color: Colors.white38),
+                            filled: true,
+                            fillColor: Colors.grey[900],
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          style: TextStyle(color: Colors.white),
+                        ),
+                        SizedBox(height: 16),
+                        TextField(
+                          controller: emailController,
+                          decoration: InputDecoration(
+                            labelText: "Email",
+                            labelStyle: TextStyle(color: Colors.white70),
+                            hintText: "Enter your email",
+                            hintStyle: TextStyle(color: Colors.white38),
+                            filled: true,
+                            fillColor: Colors.grey[900],
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          style: TextStyle(color: Colors.white),
+                          keyboardType: TextInputType.emailAddress,
+                        ),
+                        SizedBox(height: 16),
+                        TextField(
+                          controller: phoneController,
+                          decoration: InputDecoration(
+                            labelText: "Phone Number",
+                            labelStyle: TextStyle(color: Colors.white70),
+                            hintText: "Enter your phone number",
+                            hintStyle: TextStyle(color: Colors.white38),
+                            filled: true,
+                            fillColor: Colors.grey[900],
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          style: TextStyle(color: Colors.white),
+                          keyboardType: TextInputType.phone,
+                        ),
+                        SizedBox(height: 16),
+                        DropdownButtonFormField<String>(
+                          value: gender,
+                          decoration: InputDecoration(
+                            labelText: "Gender",
+                            labelStyle: TextStyle(color: Colors.white70),
+                            filled: true,
+                            fillColor: Colors.grey[900],
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          items: ["Male", "Female", "Other"]
+                              .map((value) => DropdownMenuItem(
+                            value: value,
+                            child: Text(
+                              value,
+                              style: TextStyle(color: Colors.white),
+                            ),
+                          ))
+                              .toList(),
+                          onChanged: (newValue) {
+                            setState(() {
+                              gender = newValue!;
+                            });
+                          },
+                        ),
+                        SizedBox(height: 16),
+                        TextField(
+                          controller: passwordController,
+                          decoration: InputDecoration(
+                            labelText: "Password",
+                            labelStyle: TextStyle(color: Colors.white70),
+                            hintText: "Enter your password",
+                            hintStyle: TextStyle(color: Colors.white38),
+                            filled: true,
+                            fillColor: Colors.grey[900],
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          style: TextStyle(color: Colors.white),
+                          obscureText: true,
+                        ),
+                        SizedBox(height: 24),
+                        ElevatedButton(
+                          onPressed: isLoading ? null : registerUser,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            child: isLoading
+                                ? CircularProgressIndicator(
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            )
+                                : Text(
+                              "Register",
+                              style: TextStyle(fontSize: 18),
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            minimumSize: Size(double.infinity, 50),
+                            backgroundColor: Colors.blueAccent,
+                          ),
+                        ),
+                        SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: isLoading ? null : signInWithGoogle,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            child: isLoading
+                                ? CircularProgressIndicator(
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            )
+                                : Text(
+                              "Sign in with Google",
+                              style: TextStyle(fontSize: 18),
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            minimumSize: Size(double.infinity, 50),
+                            backgroundColor: Colors.redAccent,
+                          ),
+                        ),
+                        SizedBox(height: 16),
+                        InkWell(
+                          onTap: () {
+                            // Navigate to the login screen
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (context) => LoginPage()),
+                            );
+                          },
+                          child: Text(
+                            "Have an account? Log in here.",
+                            style: TextStyle(
+                              color: Colors.blue,
+                              fontSize: 16,
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: 16),
+                        InkWell(
+                          onTap: () {
+                            // Navigate to HomePage for guest login
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (context) => const HomePage()),
+                            );
+                          },
+                          child: Text(
+                            "Login as guest? Click here!",
+                            style: TextStyle(
+                              color: Colors.blue,
+                              fontSize: 16,
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                    style: TextStyle(color: Colors.black),
                   ),
-                  SizedBox(height: 16),
-                  TextField(
-                    controller: emailController,
-                    decoration: InputDecoration(
-                      labelText: "Email",
-                      floatingLabelBehavior: FloatingLabelBehavior.auto,
-                      filled: true,
-                      fillColor: Colors.white,
-                      border: OutlineInputBorder(),
-                      labelStyle: TextStyle(color: Colors.black),
-                    ),
-                    style: TextStyle(color: Colors.black),
-                  ),
-                  SizedBox(height: 16),
-                  TextField(
-                    controller: phoneController,
-                    decoration: InputDecoration(
-                      labelText: "Phone Number",
-                      floatingLabelBehavior: FloatingLabelBehavior.auto,
-                      filled: true,
-                      fillColor: Colors.white,
-                      border: OutlineInputBorder(),
-                      labelStyle: TextStyle(color: Colors.black),
-                    ),
-                    style: TextStyle(color: Colors.black),
-                  ),
-                  SizedBox(height: 16),
-                  DropdownButton<String>(
-                    value: gender,
-                    onChanged: (String? newValue) {
-                      setState(() {
-                        gender = newValue!;
-                      });
-                    },
-                    dropdownColor: Colors.black,
-                    items: ["Male", "Female", "Other"]
-                        .map<DropdownMenuItem<String>>((String value) {
-                      return DropdownMenuItem<String>(
-                        value: value,
-                        child: Text(
-                            value, style: TextStyle(color: Colors.white)),
-                      );
-                    }).toList(),
-                  ),
-                  SizedBox(height: 16),
-                  TextField(
-                    controller: passwordController,
-                    decoration: InputDecoration(
-                      labelText: "Password",
-                      floatingLabelBehavior: FloatingLabelBehavior.auto,
-                      filled: true,
-                      fillColor: Colors.white,
-                      border: OutlineInputBorder(),
-                      labelStyle: TextStyle(color: Colors.black),
-                    ),
-                    style: TextStyle(color: Colors.black),
-                    obscureText: true,
-                  ),
-                  SizedBox(height: 20),
-                  ElevatedButton(
-                    onPressed: registerUser,
-                    child: Text("Register"),
-                    style: ElevatedButton.styleFrom(
-                      minimumSize: Size(double.infinity, 50),
-                      backgroundColor: Colors.blueAccent,
-                    ),
-                  ),
-                  SizedBox(height: 10),
-                  ElevatedButton(
-                    onPressed: signInWithGoogle,
-                    child: Text("Sign in with Google"),
-                    style: ElevatedButton.styleFrom(
-                      minimumSize: Size(double.infinity, 50),
-                      backgroundColor: Colors.redAccent,
-                    ),
-                  ),
-                  SizedBox(height: 16),
-                  InkWell(
-                    onTap: () {
-                      // Navigate to the login screen
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => LoginPage()),
-                      );
-                    },
-                    child: const Text(
-                      "Have an account? Log in here.",
-                      style: TextStyle(
-                        color: Colors.blue,
-                        fontSize: 16,
-                        decoration: TextDecoration.underline,
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: 16),
-                  InkWell(
-                    onTap: () {
-                      // Navigate to the login screen
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const HomePage()),
-                      );
-                    },
-                    child: const Text(
-                      "Login as guests?Click here!.",
-                      style: TextStyle(
-                        color: Colors.blue,
-                        fontSize: 16,
-                        decoration: TextDecoration.underline,
-                      ),
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
-          ),
+          )
         ],
       ),
     );
   }
 }
-// Custom Painter for the Hexagon Grid
+
+// Custom Painter for the Hexagon Grid background
 class PointedHexagonGridPainter extends CustomPainter {
   final Offset? hoveredHexagon;
 
@@ -293,8 +374,8 @@ class PointedHexagonGridPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.black!
+    final gridPaint = Paint()
+      ..color = Colors.white.withOpacity(0.2) // Lighter color for visibility
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1;
 
@@ -313,7 +394,6 @@ class PointedHexagonGridPainter extends CustomPainter {
 
       for (double x = 0; x < size.width + hexWidth; x += hexWidth) {
         double xOffset = isOffsetRow ? hexWidth / 2 : 0;
-
         final center = Offset(x + xOffset, y);
 
         if (center.dx - hexRadius > size.width || center.dy - hexRadius > size.height) {
@@ -322,8 +402,8 @@ class PointedHexagonGridPainter extends CustomPainter {
 
         final isHovered = hoveredHexagon != null &&
             (center - hoveredHexagon!).distance <= hexRadius * 2;
-
-        drawHexagon(canvas, isHovered ? hoverPaint : paint, center, hexRadius);
+        drawHexagon(
+            canvas, isHovered ? hoverPaint : gridPaint, center, hexRadius);
       }
     }
   }

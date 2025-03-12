@@ -1,104 +1,97 @@
 import 'package:flutter/material.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
+import 'package:firebase_auth/firebase_auth.dart';
 import 'register_page.dart';
 import 'home_page.dart';
 import 'dart:math';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
-class LoginPage extends StatelessWidget {
+class LoginPage extends StatefulWidget {
+  @override
+  _LoginPageState createState() => _LoginPageState();
+}
+
+class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
   String email = '';
   String password = '';
+  bool isLoading = false;
 
-  // Function to login user with email and password
-  void loginUser(BuildContext context) async {
+  // Function to login user using Firebase Authentication with Email/Password
+  Future<void> loginUser() async {
+    setState(() {
+      isLoading = true;
+    });
     try {
-      final response = await http.post(
-        Uri.parse('https://41cc-2405-201-8021-2002-11b8-1d04-9635-7ea2.ngrok-free.app/login'),
-        headers: {
-          'Content-Type': 'application/json',  // Corrected to application/json
-        },
-        body: jsonEncode({
-          'email': email,  // Stringify the body
-          'password': password,
-        }),
+      UserCredential userCredential = await FirebaseAuth.instance
+          .signInWithEmailAndPassword(email: email.trim(), password: password);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Login successful!')),
       );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-
-        // Check if login is successful
-        if (data['status'] == 'success') {
-          // Fetch and save user data
-          await fetchUserDataAndSave(context, email);
-
-          // Navigate to HomePage
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => HomePage()),
-          );
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Login successful!')),
-          );
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Login failed: ${data['message']}')),
-          );
-        }
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: Unable to connect to server')),
-        );
-      }
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => HomePage()),
+      );
+    } on FirebaseAuthException catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Login failed: ${e.message}')),
+      );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error: $e')),
       );
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
     }
   }
 
-  // Function to fetch user data from the PHP API and save to SharedPreferences
-  Future<void> fetchUserDataAndSave(BuildContext context, String email) async {
-    final prefs = await SharedPreferences.getInstance();
-
+  // Function to sign in with Google
+  Future<void> signInWithGoogle(BuildContext context) async {
+    setState(() {
+      isLoading = true;
+    });
     try {
-      final response = await http.get(
-        Uri.parse('https://41cc-2405-201-8021-2002-11b8-1d04-9635-7ea2.ngrok-free.app/get_user_data?email=$email'),
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-
-        // Check for error in response
-        if (data['error'] != null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(data['error'])),
-          );
-          return;
-        }
-
-        // Save user data in SharedPreferences
-        prefs.setString('name', data['name']);
-        prefs.setString('phone', data['phone_number']);
-        prefs.setString('email', email);
-        prefs.setString('gender', data['gender']);
-
-        print('User data saved successfully.');
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to load user data')),
-        );
+      final GoogleSignIn googleSignIn = GoogleSignIn();
+      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
+      if (googleUser == null) {
+        // User aborted the sign in
+        setState(() {
+          isLoading = false;
+        });
+        return;
       }
+      final GoogleSignInAuthentication googleAuth =
+      await googleUser.authentication;
+      final credential = GoogleAuthProvider.credential(
+          accessToken: googleAuth.accessToken, idToken: googleAuth.idToken);
+      UserCredential userCredential =
+      await FirebaseAuth.instance.signInWithCredential(credential);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Google Sign-In successful")),
+      );
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => HomePage()),
+      );
+    } on FirebaseAuthException catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Google Sign-In failed: ${e.message}")),
+      );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error fetching user data: $e')),
+        SnackBar(content: Text("Google Sign-In error: $e")),
       );
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    // Responsive design using SingleChildScrollView and ConstrainedBox inside a Card
     return Scaffold(
       body: Stack(
         children: [
@@ -107,94 +100,155 @@ class LoginPage extends StatelessWidget {
             painter: PointedHexagonGridPainter(),
           ),
           Center(
-            child: Padding(
+            child: SingleChildScrollView(
               padding: const EdgeInsets.all(16.0),
-              child: Card(
-                color: Colors.black.withOpacity(0.9),
-                elevation: 8.0,
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Form(
-                    key: _formKey,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          "Welcome Back",
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        SizedBox(height: 20),
-                        TextFormField(
-                          style: TextStyle(color: Colors.white),
-                          decoration: InputDecoration(
-                            labelText: "Email",
-                            labelStyle: TextStyle(color: Colors.white),
-                          ),
-                          keyboardType: TextInputType.emailAddress,
-                          validator: (value) =>
-                          value!.isEmpty ? 'Please enter your email' : null,
-                          onChanged: (value) {
-                            email = value;
-                          },
-                        ),
-                        SizedBox(height: 10),
-                        TextFormField(
-                          style: TextStyle(color: Colors.white),
-                          decoration: InputDecoration(
-                            labelText: "Password",
-                            labelStyle: TextStyle(color: Colors.white),
-                          ),
-                          obscureText: true,
-                          validator: (value) =>
-                          value!.isEmpty ? 'Please enter your password' : null,
-                          onChanged: (value) {
-                            password = value;
-                          },
-                        ),
-                        SizedBox(height: 20),
-                        ElevatedButton(
-                          onPressed: () {
-                            if (_formKey.currentState!.validate()) {
-                              loginUser(context);
-                            }
-                          },
-                          child: Text("Log In"),
-                        ),
-                        SizedBox(height: 20),
-                        GestureDetector(
-                          onTap: () {
-                            Navigator.pushReplacement(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (context) => RegisterPage()),
-                            );
-                          },
-                          child: Text(
-                            "Don't have an account? Create now.",
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: 500),
+                child: Card(
+                  color: Colors.black.withOpacity(0.9),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  elevation: 10,
+                  child: Padding(
+                    padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            "Welcome Back",
                             style: TextStyle(
                               color: Colors.white,
-                              decoration: TextDecoration.underline,
+                              fontSize: 28,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
-                        ),
-                      ],
+                          SizedBox(height: 24),
+                          TextFormField(
+                            style: TextStyle(color: Colors.white),
+                            decoration: InputDecoration(
+                              labelText: "Email",
+                              labelStyle: TextStyle(color: Colors.white70),
+                              hintText: "Enter your email",
+                              hintStyle: TextStyle(color: Colors.white38),
+                              filled: true,
+                              fillColor: Colors.grey[900],
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            keyboardType: TextInputType.emailAddress,
+                            validator: (value) => value!.isEmpty
+                                ? 'Please enter your email'
+                                : null,
+                            onChanged: (value) {
+                              email = value;
+                            },
+                          ),
+                          SizedBox(height: 16),
+                          TextFormField(
+                            style: TextStyle(color: Colors.white),
+                            decoration: InputDecoration(
+                              labelText: "Password",
+                              labelStyle: TextStyle(color: Colors.white70),
+                              hintText: "Enter your password",
+                              hintStyle: TextStyle(color: Colors.white38),
+                              filled: true,
+                              fillColor: Colors.grey[900],
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            obscureText: true,
+                            validator: (value) => value!.isEmpty
+                                ? 'Please enter your password'
+                                : null,
+                            onChanged: (value) {
+                              password = value;
+                            },
+                          ),
+                          SizedBox(height: 24),
+                          ElevatedButton(
+                            onPressed: isLoading
+                                ? null
+                                : () {
+                              if (_formKey.currentState!.validate()) {
+                                loginUser();
+                              }
+                            },
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              child: isLoading
+                                  ? CircularProgressIndicator(
+                                valueColor:
+                                AlwaysStoppedAnimation<Color>(
+                                    Colors.white),
+                              )
+                                  : Text("Log In",
+                                  style: TextStyle(fontSize: 18)),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              minimumSize: Size(double.infinity, 50),
+                              backgroundColor: Colors.blueAccent,
+                            ),
+                          ),
+                          SizedBox(height: 16),
+                          ElevatedButton(
+                            onPressed: isLoading
+                                ? null
+                                : () => signInWithGoogle(context),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              child: isLoading
+                                  ? CircularProgressIndicator(
+                                valueColor:
+                                AlwaysStoppedAnimation<Color>(
+                                    Colors.white),
+                              )
+                                  : Text("Sign in with Google",
+                                  style: TextStyle(fontSize: 18)),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              minimumSize: Size(double.infinity, 50),
+                              backgroundColor: Colors.redAccent,
+                            ),
+                          ),
+                          SizedBox(height: 16),
+                          GestureDetector(
+                            onTap: () {
+                              Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) => RegisterPage()),
+                              );
+                            },
+                            child: Text(
+                              "Don't have an account? Create now.",
+                              style: TextStyle(
+                                color: Colors.blue,
+                                fontSize: 16,
+                                decoration: TextDecoration.underline,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
               ),
             ),
-          ),
+          )
         ],
       ),
     );
   }
 }
 
-// Custom Painter for the Hexagon Grid
+// Custom Painter for the Hexagon Grid background
 class PointedHexagonGridPainter extends CustomPainter {
   final Offset? hoveredHexagon;
 
@@ -202,8 +256,8 @@ class PointedHexagonGridPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.black
+    final gridPaint = Paint()
+      ..color = Colors.white.withOpacity(0.2) // Lighter color for visibility
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1;
 
@@ -222,7 +276,6 @@ class PointedHexagonGridPainter extends CustomPainter {
 
       for (double x = 0; x < size.width + hexWidth; x += hexWidth) {
         double xOffset = isOffsetRow ? hexWidth / 2 : 0;
-
         final center = Offset(x + xOffset, y);
 
         if (center.dx - hexRadius > size.width || center.dy - hexRadius > size.height) {
@@ -231,8 +284,8 @@ class PointedHexagonGridPainter extends CustomPainter {
 
         final isHovered = hoveredHexagon != null &&
             (center - hoveredHexagon!).distance <= hexRadius * 2;
-
-        drawHexagon(canvas, isHovered ? hoverPaint : paint, center, hexRadius);
+        drawHexagon(
+            canvas, isHovered ? hoverPaint : gridPaint, center, hexRadius);
       }
     }
   }

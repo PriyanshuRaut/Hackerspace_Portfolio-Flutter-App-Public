@@ -1,20 +1,19 @@
 import 'package:flutter/material.dart';
-import 'dart:convert';
-import 'package:flutter/services.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:math';
+import 'package:url_launcher/url_launcher.dart';
 import 'drawer_widget.dart';
 
 class GalleryPage extends StatefulWidget {
-  const GalleryPage({super.key});
+  const GalleryPage({Key? key}) : super(key: key);
 
   @override
   State<GalleryPage> createState() => _GalleryPageState();
 }
 
 class _GalleryPageState extends State<GalleryPage> with SingleTickerProviderStateMixin {
-  List<dynamic> members = [];
-  List<dynamic> filteredMembers = [];
+  List<Map<String, dynamic>> members = [];
+  List<Map<String, dynamic>> filteredMembers = [];
   String selectedCategory = "All";
 
   late AnimationController _animationController;
@@ -26,13 +25,12 @@ class _GalleryPageState extends State<GalleryPage> with SingleTickerProviderStat
     super.initState();
     loadMembers();
 
-    // Initialize the animation controller
+    // Initialize the animation controller for the glowing effect.
     _animationController = AnimationController(
       duration: const Duration(seconds: 2),
       vsync: this,
     )..repeat(reverse: true);
 
-    // Animate the glowing effect along a circular path and change multiple colors
     _animation = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
     );
@@ -44,12 +42,17 @@ class _GalleryPageState extends State<GalleryPage> with SingleTickerProviderStat
   }
 
   Future<void> loadMembers() async {
-    final String response = await rootBundle.loadString('assets/members.json');
-    final List<dynamic> data = jsonDecode(response);
-    setState(() {
-      members = data;
-      filteredMembers = members; // Initialize with all members
-    });
+    try {
+      QuerySnapshot snapshot = await FirebaseFirestore.instance.collection('members').get();
+      setState(() {
+        members = snapshot.docs
+            .map((doc) => doc.data() as Map<String, dynamic>)
+            .toList();
+        filteredMembers = members;
+      });
+    } catch (e) {
+      print("Error loading members: $e");
+    }
   }
 
   void filterMembersByCategory(String category) {
@@ -62,50 +65,9 @@ class _GalleryPageState extends State<GalleryPage> with SingleTickerProviderStat
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("Our Members"),
-      ),
-      drawer: const AppDrawer(),
-      body: CustomPaint(
-        painter: PointedHexagonGridPainter(),
-        child: Column(
-          children: [
-            // Category Filter
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
-                    ...["All", "Android", "Website", "Python", "Frontend", "Backend", "Others"].map(
-                          (category) => Padding(
-                        padding: const EdgeInsets.only(right: 10.0),
-                        child: _buildOption(category, isActive: selectedCategory == category),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            // Member List
-            Expanded(
-              child: filteredMembers.isEmpty
-                  ? const Center(child: Text("No members found!"))
-                  : ListView.builder(
-                padding: const EdgeInsets.all(16.0),
-                itemCount: filteredMembers.length,
-                itemBuilder: (context, index) {
-                  return _buildMemberCard(filteredMembers[index]);
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
   }
 
   Widget _buildOption(String category, {required bool isActive}) {
@@ -140,17 +102,20 @@ class _GalleryPageState extends State<GalleryPage> with SingleTickerProviderStat
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: _colorAnimation.value!, width: 2),
             gradient: LinearGradient(
-              colors: [Colors.greenAccent.withOpacity(0.3), Colors.blueAccent.withOpacity(0.3)],
+              colors: [
+                Colors.greenAccent.withOpacity(0.3),
+                Colors.blueAccent.withOpacity(0.3)
+              ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              stops: [0.3, 0.7],
+              stops: const [0.3, 0.7],
             ),
             boxShadow: [
               BoxShadow(
                 color: _colorAnimation.value!.withOpacity(0.6),
                 blurRadius: 15,
                 spreadRadius: 1,
-                offset: Offset(0, 2),
+                offset: const Offset(0, 2),
               ),
             ],
           ),
@@ -158,9 +123,10 @@ class _GalleryPageState extends State<GalleryPage> with SingleTickerProviderStat
             padding: const EdgeInsets.all(16.0),
             child: Row(
               children: [
+                // Assuming that 'image' is a URL stored in Firestore
                 CircleAvatar(
                   radius: 40,
-                  backgroundImage: AssetImage(member['image']),
+                  backgroundImage: NetworkImage(member['image']),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
@@ -223,6 +189,51 @@ class _GalleryPageState extends State<GalleryPage> with SingleTickerProviderStat
       throw Exception('Could not launch $url');
     }
   }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Our Members"),
+      ),
+      drawer: const AppDrawer(),
+      body: CustomPaint(
+        painter: PointedHexagonGridPainter(),
+        child: Column(
+          children: [
+            // Category Filter
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    ...["All", "Android", "Website", "Python", "Frontend", "Backend", "Others"]
+                        .map((category) => Padding(
+                      padding: const EdgeInsets.only(right: 10.0),
+                      child: _buildOption(category, isActive: selectedCategory == category),
+                    )),
+                  ],
+                ),
+              ),
+            ),
+            // Member List
+            Expanded(
+              child: filteredMembers.isEmpty
+                  ? const Center(child: Text("No members found!"))
+                  : ListView.builder(
+                padding: const EdgeInsets.all(16.0),
+                itemCount: filteredMembers.length,
+                itemBuilder: (context, index) {
+                  return _buildMemberCard(filteredMembers[index]);
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class PointedHexagonGridPainter extends CustomPainter {
@@ -232,8 +243,8 @@ class PointedHexagonGridPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.grey[900]!
+    final gridPaint = Paint()
+      ..color = Colors.white.withOpacity(0.3) // Adjust opacity for visibility
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1;
 
@@ -243,20 +254,10 @@ class PointedHexagonGridPainter extends CustomPainter {
 
     for (double y = 0; y < size.height + hexHeight; y += hexHeight * 0.75) {
       bool isOffsetRow = ((y ~/ (hexHeight * 0.75)) % 2 == 1);
-
       for (double x = 0; x < size.width + hexWidth; x += hexWidth) {
         double xOffset = isOffsetRow ? hexWidth / 2 : 0;
-
         final center = Offset(x + xOffset, y);
-
-        if (center.dx - hexRadius > size.width || center.dy - hexRadius > size.height) {
-          continue;
-        }
-
-        final isHovered = hoveredHexagon != null &&
-            (center - hoveredHexagon!).distance <= hexRadius * 2;
-
-        drawHexagon(canvas, isHovered ? paint : paint, center, hexRadius);
+        drawHexagon(canvas, gridPaint, center, hexRadius);
       }
     }
   }
@@ -278,5 +279,5 @@ class PointedHexagonGridPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

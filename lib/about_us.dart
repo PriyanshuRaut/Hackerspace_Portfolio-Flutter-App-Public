@@ -389,43 +389,24 @@ class _AboutUsPageState extends State<AboutUsPage> {
 
 
 class PointedHexagonGridPainter extends CustomPainter {
-  final Offset? hoveredHexagon;
-
-  PointedHexagonGridPainter({this.hoveredHexagon});
-
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.grey[900]!
+    // Increase opacity to make the grid clearly visible
+    final gridPaint = Paint()
+      ..color = Colors.white.withOpacity(0.6)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1;
 
-    final hoverPaint = Paint()
-      ..color = const Color(0xFF00FF95)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 3;
-
     const hexRadius = 30.0;
-    final hexWidth = sqrt(3) * hexRadius; // Width of each hexagon
-    final hexHeight = 2 * hexRadius; // Height of each hexagon
-    const verticalSpacing = 0.0;
+    final hexWidth = sqrt(3) * hexRadius;
+    final hexHeight = 2 * hexRadius;
 
-    for (double y = 0; y < size.height + hexHeight; y += hexHeight * 0.75 + verticalSpacing) {
+    for (double y = 0; y < size.height + hexHeight; y += hexHeight * 0.75) {
       bool isOffsetRow = ((y ~/ (hexHeight * 0.75)) % 2 == 1);
-
       for (double x = 0; x < size.width + hexWidth; x += hexWidth) {
         double xOffset = isOffsetRow ? hexWidth / 2 : 0;
-
         final center = Offset(x + xOffset, y);
-
-        if (center.dx - hexRadius > size.width || center.dy - hexRadius > size.height) {
-          continue;
-        }
-
-        final isHovered = hoveredHexagon != null &&
-            (center - hoveredHexagon!).distance <= hexRadius * 2;
-
-        drawHexagon(canvas, isHovered ? hoverPaint : paint, center, hexRadius);
+        drawHexagon(canvas, gridPaint, center, hexRadius);
       }
     }
   }
@@ -447,5 +428,5 @@ class PointedHexagonGridPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

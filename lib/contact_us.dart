@@ -78,9 +78,9 @@ class ContactUsPage extends StatelessWidget {
                       const SizedBox(width: 10),
                       GestureDetector(
                         onTap: () =>
-                            _launchURL('mailto:hackerspace@example.com'),
+                            _launchURL('mailto:hackerspace@hackerspace.com'),
                         child: const Text(
-                          'hackerspace@example.com',
+                          'hackerspace@hackerspace.com',
                           style: TextStyle(
                             color: Colors.white70,
                             fontSize: 16,
