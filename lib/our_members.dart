@@ -25,7 +25,6 @@ class _GalleryPageState extends State<GalleryPage> with SingleTickerProviderStat
     super.initState();
     loadMembers();
 
-    // Initialize the animation controller for the glowing effect.
     _animationController = AnimationController(
       duration: const Duration(seconds: 2),
       vsync: this,
@@ -43,7 +42,11 @@ class _GalleryPageState extends State<GalleryPage> with SingleTickerProviderStat
 
   Future<void> loadMembers() async {
     try {
-      QuerySnapshot snapshot = await FirebaseFirestore.instance.collection('members').get();
+      // Query only members that are verified (isVerified == true)
+      QuerySnapshot snapshot = await FirebaseFirestore.instance
+          .collection('members')
+          .where('isVerified', isEqualTo: true)
+          .get();
       setState(() {
         members = snapshot.docs
             .map((doc) => doc.data() as Map<String, dynamic>)
@@ -123,7 +126,6 @@ class _GalleryPageState extends State<GalleryPage> with SingleTickerProviderStat
             padding: const EdgeInsets.all(16.0),
             child: Row(
               children: [
-                // Assuming that 'image' is a URL stored in Firestore
                 CircleAvatar(
                   radius: 40,
                   backgroundImage: NetworkImage(member['image']),
@@ -201,7 +203,6 @@ class _GalleryPageState extends State<GalleryPage> with SingleTickerProviderStat
         painter: PointedHexagonGridPainter(),
         child: Column(
           children: [
-            // Category Filter
             Padding(
               padding: const EdgeInsets.all(8.0),
               child: SingleChildScrollView(
@@ -217,7 +218,6 @@ class _GalleryPageState extends State<GalleryPage> with SingleTickerProviderStat
                 ),
               ),
             ),
-            // Member List
             Expanded(
               child: filteredMembers.isEmpty
                   ? const Center(child: Text("No members found!"))
@@ -238,20 +238,16 @@ class _GalleryPageState extends State<GalleryPage> with SingleTickerProviderStat
 
 class PointedHexagonGridPainter extends CustomPainter {
   final Offset? hoveredHexagon;
-
   PointedHexagonGridPainter({this.hoveredHexagon});
-
   @override
   void paint(Canvas canvas, Size size) {
     final gridPaint = Paint()
-      ..color = Colors.white.withOpacity(0.3) // Adjust opacity for visibility
+      ..color = Colors.white.withOpacity(0.3)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1;
-
     const hexRadius = 30.0;
     final hexWidth = sqrt(3) * hexRadius;
     final hexHeight = 2 * hexRadius;
-
     for (double y = 0; y < size.height + hexHeight; y += hexHeight * 0.75) {
       bool isOffsetRow = ((y ~/ (hexHeight * 0.75)) % 2 == 1);
       for (double x = 0; x < size.width + hexWidth; x += hexWidth) {
@@ -261,7 +257,6 @@ class PointedHexagonGridPainter extends CustomPainter {
       }
     }
   }
-
   void drawHexagon(Canvas canvas, Paint paint, Offset center, double radius) {
     final path = Path();
     for (int i = 0; i < 6; i++) {
@@ -277,7 +272,6 @@ class PointedHexagonGridPainter extends CustomPainter {
     path.close();
     canvas.drawPath(path, paint);
   }
-
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

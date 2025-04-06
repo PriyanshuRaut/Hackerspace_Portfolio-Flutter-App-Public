@@ -9,7 +9,7 @@ import 'home_page.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(); // Initialize Firebase
+  await Firebase.initializeApp();
   runApp(MyApp());
 }
 
@@ -39,12 +39,10 @@ class _RegisterScreenState extends State<RegisterPage> {
   final TextEditingController phoneController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
   String gender = "Male";
-  bool isLoading = false; // Loader flag
+  bool isLoading = false;
 
   final GoogleSignIn _googleSignIn = GoogleSignIn();
 
-  // Save or update the user data in Cloud Firestore.
-  // If the text fields are empty, fallback to the user’s Firebase profile data.
   Future<void> _saveUserDataToFirestore(User user) async {
     final String userName = nameController.text.trim().isEmpty
         ? (user.displayName ?? "")
@@ -60,8 +58,10 @@ class _RegisterScreenState extends State<RegisterPage> {
       'email': userEmail,
       'phone': phoneController.text.trim(),
       'gender': gender,
+      'isAdmin': false,
       'createdAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
+
   }
 
   Future<void> registerUser() async {
@@ -69,15 +69,12 @@ class _RegisterScreenState extends State<RegisterPage> {
       isLoading = true;
     });
     try {
-      // Create user with email and password using Firebase Auth
       UserCredential userCredential =
       await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: emailController.text.trim(),
         password: passwordController.text,
       );
-      // Update display name in Firebase Auth
       await userCredential.user?.updateDisplayName(nameController.text.trim());
-      // Save additional user details to Firestore
       await _saveUserDataToFirestore(userCredential.user!);
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -107,10 +104,8 @@ class _RegisterScreenState extends State<RegisterPage> {
       isLoading = true;
     });
     try {
-      // Trigger the Google Sign-In flow
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
       if (googleUser == null) {
-        // Sign-in aborted by user
         setState(() {
           isLoading = false;
         });
@@ -122,10 +117,8 @@ class _RegisterScreenState extends State<RegisterPage> {
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
-      // Sign in to Firebase with the Google credential
       UserCredential userCredential =
       await FirebaseAuth.instance.signInWithCredential(credential);
-      // Save user data to Firestore.
       await _saveUserDataToFirestore(userCredential.user!);
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -152,11 +145,9 @@ class _RegisterScreenState extends State<RegisterPage> {
 
   @override
   Widget build(BuildContext context) {
-    // Responsive design using ConstrainedBox and SingleChildScrollView
     return Scaffold(
       body: Stack(
         children: [
-          // Using the provided hexagon grid background
           CustomPaint(
             size: MediaQuery.of(context).size,
             painter: PointedHexagonGridPainter(),
@@ -320,7 +311,6 @@ class _RegisterScreenState extends State<RegisterPage> {
                         SizedBox(height: 16),
                         InkWell(
                           onTap: () {
-                            // Navigate to the login screen
                             Navigator.push(
                               context,
                               MaterialPageRoute(builder: (context) => LoginPage()),
@@ -338,7 +328,6 @@ class _RegisterScreenState extends State<RegisterPage> {
                         SizedBox(height: 16),
                         InkWell(
                           onTap: () {
-                            // Navigate to HomePage for guest login
                             Navigator.push(
                               context,
                               MaterialPageRoute(builder: (context) => const HomePage()),
@@ -366,7 +355,6 @@ class _RegisterScreenState extends State<RegisterPage> {
   }
 }
 
-// Custom Painter for the Hexagon Grid background
 class PointedHexagonGridPainter extends CustomPainter {
   final Offset? hoveredHexagon;
 
@@ -375,7 +363,7 @@ class PointedHexagonGridPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final gridPaint = Paint()
-      ..color = Colors.white.withOpacity(0.2) // Lighter color for visibility
+      ..color = Colors.white.withOpacity(0.2)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1;
 

@@ -16,7 +16,6 @@ class _LoginPageState extends State<LoginPage> {
   String password = '';
   bool isLoading = false;
 
-  // Function to login user using Firebase Authentication with Email/Password
   Future<void> loginUser() async {
     setState(() {
       isLoading = true;
@@ -46,7 +45,6 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  // Function to sign in with Google
   Future<void> signInWithGoogle(BuildContext context) async {
     setState(() {
       isLoading = true;
@@ -55,7 +53,6 @@ class _LoginPageState extends State<LoginPage> {
       final GoogleSignIn googleSignIn = GoogleSignIn();
       final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
       if (googleUser == null) {
-        // User aborted the sign in
         setState(() {
           isLoading = false;
         });
@@ -91,7 +88,6 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
-    // Responsive design using SingleChildScrollView and ConstrainedBox inside a Card
     return Scaffold(
       body: Stack(
         children: [
@@ -248,7 +244,6 @@ class _LoginPageState extends State<LoginPage> {
   }
 }
 
-// Custom Painter for the Hexagon Grid background
 class PointedHexagonGridPainter extends CustomPainter {
   final Offset? hoveredHexagon;
 
@@ -257,7 +252,7 @@ class PointedHexagonGridPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final gridPaint = Paint()
-      ..color = Colors.white.withOpacity(0.2) // Lighter color for visibility
+      ..color = Colors.white.withOpacity(0.2)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1;
 
