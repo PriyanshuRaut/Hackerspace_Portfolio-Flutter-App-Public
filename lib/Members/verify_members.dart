@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'drawer_widget.dart'; // Ensure this file exists and is implemented
+import '../widgets/drawer_widget.dart'; // Ensure this file exists and is implemented
 import 'dart:math';
 
 class VerifyMembersPage extends StatefulWidget {

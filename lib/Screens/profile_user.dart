@@ -1,7 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:hackerspace/register_page.dart';
-import 'drawer_widget.dart';
+import 'package:hackerspace/Auths/register_page.dart';
+import '../widgets/drawer_widget.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 

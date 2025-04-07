@@ -2,15 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-import 'package:hackerspace/contact_us.dart';
-import 'package:hackerspace/profile_user.dart';
-import 'about_us.dart';
-import 'projects.dart';
-import 'events.dart';
-import 'our_members.dart';
-import 'home_page.dart';
-import 'add_members.dart';
-import 'verify_members.dart';
+import 'package:hackerspace/Screens/contact_us.dart';
+import 'package:hackerspace/Screens/profile_user.dart';
+import '../Screens/about_us.dart';
+import '../Screens/projects.dart';
+import '../Screens/events.dart';
+import '../Members/our_members.dart';
+import '../home_page.dart';
+import '../Members/add_members.dart';
+import '../Members/verify_members.dart';
 
 class AppDrawer extends StatefulWidget {
   const AppDrawer({super.key});

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'dart:math';
-import 'drawer_widget.dart';
+import '../widgets/drawer_widget.dart';
 
 // JSON Data (Replace it with an external JSON or API call if needed)
 const String eventsData = '''

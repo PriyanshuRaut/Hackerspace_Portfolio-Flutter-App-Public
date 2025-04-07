@@ -4,8 +4,8 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:hackerspace/login_page.dart';
-import 'home_page.dart';
+import 'package:hackerspace/Auths/login_page.dart';
+import '../home_page.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();

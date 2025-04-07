@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:math';
-import 'drawer_widget.dart';
+import '../widgets/drawer_widget.dart';
 
 class ContactUsPage extends StatelessWidget {
   const ContactUsPage({super.key});

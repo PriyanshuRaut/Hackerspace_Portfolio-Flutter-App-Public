@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'dart:math';
-import 'drawer_widget.dart';
-import 'about_us.dart';
-import 'projects.dart';
-import 'our_members.dart';
+import 'widgets/drawer_widget.dart';
+import 'Screens/about_us.dart';
+import 'Screens/projects.dart';
+import 'Members/our_members.dart';
 import 'package:animated_text_kit/animated_text_kit.dart';
-import 'about_us_card.dart';
-import 'member_card.dart';
-import 'project_card.dart';
+import 'widgets/about_us_card.dart';
+import 'widgets/member_card.dart';
+import 'widgets/project_card.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();

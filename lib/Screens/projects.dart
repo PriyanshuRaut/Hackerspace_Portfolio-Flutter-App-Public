@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'dart:math';
 import 'dart:async';
 import 'package:flutter/services.dart';
-import 'drawer_widget.dart';
+import '../widgets/drawer_widget.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class ProjectsPage extends StatefulWidget {

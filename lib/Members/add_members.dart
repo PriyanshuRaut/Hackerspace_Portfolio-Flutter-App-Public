@@ -1,8 +1,14 @@
-import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:convert';
+import 'dart:io';
 import 'dart:math';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'drawer_widget.dart';
+import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:http/http.dart' as http;
+
+import '../widgets/drawer_widget.dart';
 
 class AddMembersPage extends StatefulWidget {
   const AddMembersPage({Key? key}) : super(key: key);
@@ -22,8 +28,52 @@ class _AddMembersPageState extends State<AddMembersPage> {
   final TextEditingController _twitterController = TextEditingController();
   final TextEditingController _instagramController = TextEditingController();
 
-  // You can set a fixed value for isVerified as needed.
   final bool _isVerified = false;
+
+  Future<void> _pickAndUploadImage() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    if (pickedFile == null) return;
+
+    File imageFile = File(pickedFile.path);
+    String? imageUrl = await _uploadImageToImgbb(imageFile);
+    if (imageUrl != null) {
+      setState(() {
+        _imageController.text = imageUrl;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Image uploaded successfully!')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Image upload failed.')),
+      );
+    }
+  }
+
+  Future<String?> _uploadImageToImgbb(File imageFile) async {
+    try {
+      final apiKey = "4ae96be64fc39a9eb2ac57422223064b";
+      final base64Image = base64Encode(await imageFile.readAsBytes());
+      final url = Uri.parse("https://api.imgbb.com/1/upload?key=$apiKey");
+
+      final response = await http.post(url, body: {
+        "image": base64Image,
+        "name": "profile_${DateTime.now().millisecondsSinceEpoch}"
+      });
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['data']['display_url'];
+      } else {
+        print("Upload failed: ${response.body}");
+        return null;
+      }
+    } catch (e) {
+      print("Exception during image upload: $e");
+      return null;
+    }
+  }
 
   Future<void> _submitForm() async {
     if (!_formKey.currentState!.validate()) return;
@@ -34,6 +84,7 @@ class _AddMembersPageState extends State<AddMembersPage> {
       );
       return;
     }
+
     Map<String, dynamic> memberData = {
       'name': _nameController.text.trim(),
       'role': _roleController.text.trim(),
@@ -47,6 +98,7 @@ class _AddMembersPageState extends State<AddMembersPage> {
       'addedBy': user.uid,
       'timestamp': FieldValue.serverTimestamp(),
     };
+
     CollectionReference collectionRef = _isVerified
         ? FirebaseFirestore.instance.collection('members')
         : FirebaseFirestore.instance.collection('notverify');
@@ -56,6 +108,7 @@ class _AddMembersPageState extends State<AddMembersPage> {
         const SnackBar(content: Text('Member added successfully!')),
       );
       _formKey.currentState!.reset();
+      _imageController.clear();
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error adding member: $e')),
@@ -93,7 +146,7 @@ class _AddMembersPageState extends State<AddMembersPage> {
               children: [
                 _buildTextField(_nameController, 'Name', Icons.person),
                 _buildTextField(_roleController, 'Role', Icons.work),
-                _buildTextField(_imageController, 'Image URL', Icons.image),
+                _buildImageField(_imageController, 'Image URL', Icons.image),
                 _buildTextField(_categoryController, 'Category', Icons.category),
                 _buildTextField(_linkedinController, 'LinkedIn URL', Icons.link),
                 _buildTextField(_githubController, 'GitHub URL', Icons.code),
@@ -106,7 +159,8 @@ class _AddMembersPageState extends State<AddMembersPage> {
                     backgroundColor: const Color(0xFF00FF95),
                     foregroundColor: Colors.black,
                     padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
                   ),
                   child: const Text('Add Member'),
                 ),
@@ -118,13 +172,15 @@ class _AddMembersPageState extends State<AddMembersPage> {
     );
   }
 
-  Widget _buildTextField(TextEditingController controller, String label, IconData icon) {
+  Widget _buildTextField(
+      TextEditingController controller, String label, IconData icon) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: TextFormField(
         controller: controller,
         style: const TextStyle(color: Colors.white),
-        validator: (value) => value == null || value.isEmpty ? 'Enter $label' : null,
+        validator: (value) =>
+        value == null || value.isEmpty ? 'Enter $label' : null,
         decoration: InputDecoration(
           prefixIcon: Icon(icon, color: const Color(0xFF00FF95)),
           labelText: label,
@@ -151,6 +207,50 @@ class _AddMembersPageState extends State<AddMembersPage> {
       ),
     );
   }
+
+  Widget _buildImageField(
+      TextEditingController controller, String label, IconData icon) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: GestureDetector(
+        onTap: _pickAndUploadImage,
+        child: AbsorbPointer(
+          child: TextFormField(
+            controller: controller,
+            readOnly: true,
+            style: const TextStyle(color: Colors.white),
+            validator: (value) =>
+            value == null || value.isEmpty ? 'Pick $label' : null,
+            decoration: InputDecoration(
+              prefixIcon: Icon(icon, color: const Color(0xFF00FF95)),
+              labelText: label,
+              labelStyle: const TextStyle(color: Colors.white70),
+              hintText: 'Tap to pick image',
+              filled: true,
+              fillColor: Colors.black.withOpacity(0.5),
+              enabledBorder: OutlineInputBorder(
+                borderSide: const BorderSide(color: Colors.white70),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderSide:
+                const BorderSide(color: Color(0xFF00FF95), width: 2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              errorBorder: OutlineInputBorder(
+                borderSide: const BorderSide(color: Colors.redAccent),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              focusedErrorBorder: OutlineInputBorder(
+                borderSide: const BorderSide(color: Colors.redAccent, width: 2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class PointedHexagonGridPainter extends CustomPainter {
@@ -172,17 +272,21 @@ class PointedHexagonGridPainter extends CustomPainter {
     final hexHeight = 2 * hexRadius;
     const verticalSpacing = 0.0;
 
-    for (double y = 0; y < size.height + hexHeight; y += hexHeight * 0.75 + verticalSpacing) {
+    for (double y = 0;
+    y < size.height + hexHeight;
+    y += hexHeight * 0.75 + verticalSpacing) {
       bool isOffsetRow = ((y ~/ (hexHeight * 0.75)) % 2 == 1);
       for (double x = 0; x < size.width + hexWidth; x += hexWidth) {
         double xOffset = isOffsetRow ? hexWidth / 2 : 0;
         final center = Offset(x + xOffset, y);
-        if (center.dx - hexRadius > size.width || center.dy - hexRadius > size.height) {
+        if (center.dx - hexRadius > size.width ||
+            center.dy - hexRadius > size.height) {
           continue;
         }
         final isHovered = hoveredHexagon != null &&
             (center - hoveredHexagon!).distance <= hexRadius * 2;
-        drawHexagon(canvas, isHovered ? hoverPaint : gridPaint, center, hexRadius);
+        drawHexagon(
+            canvas, isHovered ? hoverPaint : gridPaint, center, hexRadius);
       }
     }
   }
